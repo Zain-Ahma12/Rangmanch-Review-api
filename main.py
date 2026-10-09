@@ -1,7 +1,16 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from database import create_tables
-from routes.reviews import router
+from routes import router
+
+from exceptions import (
+    InvalidPlayNameError, invalid_play_name_handler,
+    InvalidReviewIdError, invalid_review_id_handler
+)
+
+from fastapi_swagger_ui_theme import setup_swagger_ui_theme
+
+import uvicorn
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -16,7 +25,19 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title= "Rangmanch review API",
     description= "Theater customer review API for a Hyderabad based theatre startup",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url=None,
 )
 
+# Use the theme helper
+setup_swagger_ui_theme(app, docs_path="/docs")
+
+# register your custom exception handlers
+app.add_exception_handler(InvalidPlayNameError, invalid_play_name_handler)
+app.add_exception_handler(InvalidReviewIdError, invalid_review_id_handler)
+
+# include the router
 app.include_router(router)
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host = "127.0.0.1", port = 8000, reload = True)

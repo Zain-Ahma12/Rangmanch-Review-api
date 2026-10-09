@@ -1,2 +1,3 @@
 fastapi[standard]
 sqlmodel
+fastapi-swagger-ui-theme # for toggle dark theme in swagger_ui

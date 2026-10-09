@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status, Query
 from sqlmodel import Session, select, func
 from model import Review, ReviewRead, ReviewCreate, ReviewUpdate, AverageReview
 from database import get_session
-from exceptions import ReviewNotFoundException
+from exceptions import InvalidPlayNameError, InvalidReviewIdError
 
 router = APIRouter(
     prefix="/reviews",
@@ -64,10 +64,78 @@ def get_average_rating(
     avg_rating, total_reviews = result
     
     if total_reviews == 0:
-        raise ReviewNotFoundException(play_name, "No data found for given play name")
+        raise InvalidPlayNameError(play_name, "No data found for given play name")
     
     return AverageReview(
         play_name = play_name,
         average_rating = avg_rating,
         total_reviews = total_reviews
     )
+    
+
+@router.get(
+    "/{id}",
+    response_model= ReviewRead,
+    status_code= status.HTTP_200_OK
+)
+def get_review_for_id(
+    id: int,
+    session: Session = Depends(get_session)
+):
+    review = session.get(Review, id)
+    
+    if not review:
+        raise InvalidReviewIdError(id, "No data found for given review id")
+    
+    return review
+
+
+@router.patch(
+    "/{id}",
+    response_model= ReviewRead,
+    status_code= status.HTTP_200_OK
+)
+def update_review_for_id(
+    id: int,
+    update: ReviewUpdate,
+    session: Session = Depends(get_session)
+):
+    review = session.get(Review, id)
+    
+    if not review:
+        raise InvalidReviewIdError(id, "No data found for given review id")
+    
+    update_data = update.model_dump(exclude_unset=True)
+    
+    for key, value in update_data.items():
+        setattr(review, key, value)
+    
+    session.add(review)
+    session.commit()
+    session.refresh(review)
+    
+    return review
+
+@router.delete(
+    "/{id}",
+    status_code= status.HTTP_204_NO_CONTENT
+)
+def update_review_for_id(
+    id: int,
+    update: ReviewUpdate,
+    session: Session = Depends(get_session)
+):
+    review = session.get(Review, id)
+    
+    if not review:
+        raise InvalidReviewIdError(id, "No data found for given review id")
+    
+    
+    session.delete(review)
+    session.commit()
+    session.refresh(review)
+    
+    return {
+        "status": "success",
+        "message": "Review deleted successfully"
+    }

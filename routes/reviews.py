@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Query
 from sqlmodel import Session, select, func
-from model import Review, ReviewRead, ReviewCreate, ReviewUpdate
+from model import Review, ReviewRead, ReviewCreate, ReviewUpdate, AverageReview
 from database import get_session
+from exceptions import ReviewNotFoundException
 
 router = APIRouter(
     prefix="/reviews",
@@ -20,3 +21,53 @@ def create_review(review: ReviewCreate, session: Session = Depends(get_session))
     session.commit()
     session.refresh(db_review)
     return db_review
+
+
+@router.get(
+    "/",
+    response_model= list[ReviewRead],
+    status_code= status.HTTP_200_OK
+    )
+def list_reviews(
+    play_name: str | None = Query(None, description="Filter by play_name"),
+    skip: int = Query(0, ge=0, description="Number of reviews to skip"),
+    limit: int = Query(10, ge=0, le=50, description="Number of reviews to return"),
+    session: Session = Depends(get_session)
+    ):
+    querry = select(Review)
+    
+    if play_name:
+        querry = querry.where(Review.play_name == play_name)
+    
+    querry = querry.offset(skip).limit(limit) # pagination using offset and limit.
+    reviews = session.exec(querry).all()
+    return reviews
+    
+
+@router.get(
+    "/average/{play_name}",
+    response_model= AverageReview,
+    status_code= status.HTTP_200_OK
+)
+def get_average_rating(
+    play_name: str,
+    session: Session = Depends(get_session)
+):
+    result = session.exec(
+        select(
+            func.avg(Review.rating).label("average_rating"),
+            func.count(Review.id).label("total_reviews")
+        )
+        .where(Review.play_name == play_name)
+    ).first()
+    
+    avg_rating, total_reviews = result
+    
+    if total_reviews == 0:
+        raise ReviewNotFoundException(play_name, "No data found for given play name")
+    
+    return AverageReview(
+        play_name = play_name,
+        average_rating = avg_rating,
+        total_reviews = total_reviews
+    )

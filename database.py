@@ -1,4 +1,4 @@
-form sqlmodel import SQLModel, Session, create_engine  # type: ignore
+from sqlmodel import SQLModel, Session, create_engine
 
 DATABASE_URL = "sqlite:///rangmanch.db"
 

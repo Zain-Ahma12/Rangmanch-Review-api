@@ -9,7 +9,7 @@ class Review(SQLModel, table=True):
     rating: int = Field(ge=0, le=5)
     comment: str
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
+        default_factory=lambda: datetime.now(timezone.utc) # this will set the created_at field to the current UTC time
     )
     
 

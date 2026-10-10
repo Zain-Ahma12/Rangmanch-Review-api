@@ -121,10 +121,8 @@ The page loads Swagger UI and its fonts from a CDN, so it needs an internet conn
 
 ### Demo Video
 
-<p align="center">
-  <video src="docs/Swagger_ui_show.mp4" controls autoplay loop muted width="100%"></video>
+[▶ Watch the Swagger UI Demo](https://zain-ahma12.github.io/Rangmanch-Review-api/)
 
-</p>
 
 
 ## Project structure

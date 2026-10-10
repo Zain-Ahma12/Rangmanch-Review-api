@@ -10,6 +10,8 @@ from exceptions import (
 
 from fastapi_swagger_ui_theme import setup_swagger_ui_theme
 
+from custom_docs_ui import setup_custom_docs
+
 import uvicorn
 
 @asynccontextmanager
@@ -26,11 +28,13 @@ app = FastAPI(
     title= "Rangmanch review API",
     description= "Theater customer review API for a Hyderabad based theatre startup",
     lifespan=lifespan,
-    docs_url=None,
+    docs_url=None, # to override the default /docs route
 )
 
-# Use the theme helper
-setup_swagger_ui_theme(app, docs_path="/docs")
+# Use the theme helper, just enables dark mode.
+# setup_swagger_ui_theme(app, docs_path="/docs")
+
+setup_custom_docs(app, docs_path="/docs")
 
 # register your custom exception handlers
 app.add_exception_handler(InvalidPlayNameError, invalid_play_name_handler)

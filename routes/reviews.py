@@ -15,7 +15,7 @@ router = APIRouter(
     response_model= ReviewRead,
     status_code= status.HTTP_201_CREATED
     ) # when you post a request to create a new review you will get back a response that follow this schema
-def create_review(review: ReviewCreate, session: Session = Depends(get_session)):
+def create_review(review: ReviewCreate, session: Session = Depends(get_session)) -> ReviewRead:
     db_review = Review.model_validate(review) # Review(**review.model_dump()) old method
     session.add(db_review)
     session.commit()
@@ -33,7 +33,7 @@ def list_reviews(
     skip: int = Query(0, ge=0, description="Number of reviews to skip"),
     limit: int = Query(10, ge=0, le=50, description="Number of reviews to return"),
     session: Session = Depends(get_session)
-    ):
+    ) -> list[ReviewRead]:
     querry = select(Review)
     
     if play_name:
@@ -52,7 +52,7 @@ def list_reviews(
 def get_average_rating(
     play_name: str,
     session: Session = Depends(get_session)
-):
+) -> AverageReview:
     result = session.exec(
         select(
             func.avg(Review.rating).label("average_rating"),
@@ -64,7 +64,7 @@ def get_average_rating(
     avg_rating, total_reviews = result
     
     if total_reviews == 0:
-        raise InvalidPlayNameError(play_name, "No data found for given play name")
+        raise InvalidPlayNameError(play_name)
     
     return AverageReview(
         play_name = play_name,
@@ -81,59 +81,58 @@ def get_average_rating(
 def get_review_for_id(
     id: int,
     session: Session = Depends(get_session)
-):
+) -> ReviewRead:
     review = session.get(Review, id)
     
     if not review:
-        raise InvalidReviewIdError(id, "No data found for given review id")
+        raise InvalidReviewIdError(id)
     
     return review
 
 
 @router.patch(
     "/{id}",
-    response_model= ReviewRead,
-    status_code= status.HTTP_200_OK
+    response_model=ReviewRead,
+    status_code=status.HTTP_200_OK,
 )
 def update_review_for_id(
     id: int,
     update: ReviewUpdate,
-    session: Session = Depends(get_session)
-):
+    session: Session = Depends(get_session),
+) -> ReviewRead:
     review = session.get(Review, id)
-    
-    if not review:
-        raise InvalidReviewIdError(id, "No data found for given review id")
-    
+
+    if review is None:
+        raise InvalidReviewIdError(id)
+
     update_data = update.model_dump(exclude_unset=True)
-    
-    for key, value in update_data.items():
-        setattr(review, key, value)
-    
+
+    review.sqlmodel_update(update_data)
+
     session.add(review)
     session.commit()
     session.refresh(review)
-    
+
     return review
+
 
 @router.delete(
     "/{id}",
-    status_code= status.HTTP_204_NO_CONTENT
+    status_code= status.HTTP_200_OK
 )
-def update_review_for_id(
+def delete_review_for_id(
     id: int,
-    update: ReviewUpdate,
     session: Session = Depends(get_session)
-):
+) -> dict[str, str]:
     review = session.get(Review, id)
     
-    if not review:
-        raise InvalidReviewIdError(id, "No data found for given review id")
+    if review is None:
+        raise InvalidReviewIdError(id)
     
     
     session.delete(review)
     session.commit()
-    session.refresh(review)
+    
     
     return {
         "status": "success",
